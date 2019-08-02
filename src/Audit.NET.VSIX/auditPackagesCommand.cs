@@ -19,10 +19,11 @@ namespace Audit.NET.VSIX
         /// </summary>
         public const int CommandId = 0x0100;
 
+        public const string CommandSetGuidString = "521d68d4-ca67-493e-96e3-703361dbcc2a";
         /// <summary>
         /// Command menu group (command set GUID).
         /// </summary>
-        public static readonly Guid CommandSet = new Guid("521d68d4-ca67-493e-96e3-703361dbcc2a");
+        public static readonly Guid CommandSet = new Guid(CommandSetGuidString);
 
         /// <summary>
         /// VS Package that provides this command, not null.

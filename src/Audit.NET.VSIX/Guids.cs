@@ -35,12 +35,14 @@ namespace Audit.NET.VSIX
 {
     static class GuidList
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+        public const string guidAuditPkgString = AuditdotNETVSIXPackage.PackageGuidString;
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
+        public const string guidAuditCmdSetString = auditPackagesCommand.CommandSetGuidString;
+
+        public static readonly Guid guidAuditCmdSet = auditPackagesCommand.CommandSet;
+
         public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
 
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
         public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
     }
 
