@@ -88,7 +88,7 @@ namespace Audit.NET.VSIX
             uint itemID;
             IVsWindowFrame windowFrame;
 
-            if (VsShellUtilities.IsDocumentOpen(AuditdotNetPackage.Instance, path, new Guid(LogicalViewID.TextView), out uiHierarchy, out itemID, out windowFrame))
+            if (VsShellUtilities.IsDocumentOpen(AuditdotNETVSIXPackage.Instance, path, new Guid(LogicalViewID.TextView), out uiHierarchy, out itemID, out windowFrame))
             {
                 IVsTextView pView;
                 IVsTextLines textLines;

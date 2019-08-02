@@ -24,19 +24,21 @@ namespace Audit.NET.VSIX
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [Guid(AuditdotNetPackage.PackageGuidString)]
-    public sealed class AuditdotNetPackage : AsyncPackage
+    [Guid(PackageGuidString)]
+    [ProvideMenuResource("Menus.ctmenu", 1)]
+    public sealed class AuditdotNETVSIXPackage : AsyncPackage
     {
-        public AuditdotNetPackage()
-        {
-            Instance = this;
-        }
-        /// <summary>
-        /// VSIXProject1Package GUID string.
+         /// <summary>
+        /// Audit.NET.VSIXPackage GUID string.
         /// </summary>
-        public const string PackageGuidString = "c4eb17c4-43ff-43b7-95a8-339f52984cdc";
+        public const string PackageGuidString = "d6329e33-9e01-4db6-bb76-7af303523a8a";
 
-        public AuditdotNetPackage _instance;
+        public static AuditdotNETVSIXPackage Instance
+        {
+            get;
+            private set;
+        }
+
         #region Package Members
 
         /// <summary>
@@ -47,16 +49,14 @@ namespace Audit.NET.VSIX
         /// <param name="progress">A provider for progress updates.</param>
         /// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
-        {
+    {
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-        }
-
-
-
-        #endregion
-
-        public static AuditdotNetPackage Instance { get; private set; }
+            Instance = new AuditdotNETVSIXPackage();
+            await auditPackagesCommand.InitializeAsync(this);
     }
+
+    #endregion
+}
 }

@@ -10,7 +10,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectTypeGuids>{82b43b9b-a64c-4715-b499-d71e9ca2bd60};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <ProjectGuid>{90EC79CE-3AC4-4827-B6EF-B7B139EB85BD}</ProjectGuid>
+    <ProjectGuid>{30C50296-C62A-49FD-A9F5-AF3754CCDA4C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Audit.NET.VSIX</RootNamespace>
@@ -45,11 +45,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="auditPackagesCommand.cs" />
     <Compile Include="ExceptionHelper.cs" />
+    <Compile Include="Guids.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Audit.NET.VSIXPackage.cs" />
     <Compile Include="ServiceLocator.cs" />
     <Compile Include="VsConstants.cs" />
-    <Compile Include="AuditdotNETPackage.cs" />
     <Compile Include="VsUtility.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -58,7 +60,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.200" ExcludeAssets="runtime" />
@@ -66,6 +74,22 @@
     <PackageReference Include="NuGet.VisualStudio">
       <Version>5.2.0</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <VSCTCompile Include="AuditdotNETVSIXPackage.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+    </VSCTCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="audit-32x32.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="LICENSE.TXT">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="Resources\auditPackagesCommand.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AuditdotNETPackage.resx" />
