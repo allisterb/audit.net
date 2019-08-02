@@ -67,7 +67,7 @@ namespace Audit.NET.VSIX
 
             IVsHierarchy hierarchy = null;
 
-            var solution = ServiceLocator.GetInstance<IVsSolution>();
+            var solution = AuditdotNETVSIXPackage.Instance.GetService<IVsSolution, IVsSolution>();
 
             ErrorHandler.ThrowOnFailure(solution.GetProjectOfUniqueName(project.UniqueName, out hierarchy));
 
@@ -155,8 +155,6 @@ namespace Audit.NET.VSIX
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            ThreadHelper.ThrowIfNotOnUIThread();
-
 			if (project.Kind != null && _supportedProjectTypes.Contains(project.Kind)) {
 				return true;
 			}
@@ -170,7 +168,7 @@ namespace Audit.NET.VSIX
             {
                 // FIXME: This should not happen
                 if (project == null) return false;
-                IVsPackageInstallerServices locator = ServiceLocator.GetInstance<IVsPackageInstallerServices>();
+                IVsPackageInstallerServices locator = AuditdotNETVSIXPackage.Instance.GetService<IVsPackageInstallerServices, IVsPackageInstallerServices>();
                 // FIXME: This should not happen
                 if (locator == null) return false;
                 locator.IsPackageInstalled(project, "__dummy__");
