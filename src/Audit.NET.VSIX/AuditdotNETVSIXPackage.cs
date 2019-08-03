@@ -26,13 +26,17 @@
 #endregion
 
 using System;
+using System.ComponentModel.Composition;
 using System.Runtime.InteropServices;
 using System.Threading;
+
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Events;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.ComponentModelHost;
 using NuGet.VisualStudio;
+
 using TTasks = System.Threading.Tasks;
 
 namespace Audit.NET.VSIX
@@ -89,22 +93,21 @@ namespace Audit.NET.VSIX
         {
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
+            Instance = new AuditdotNETVSIXPackage();
+            this.AddService(typeof(INuGetPackagesAuditService), CreateNuGetPackagesAuditServiceAsync);
+            var s = (await this.GetServiceAsync(typeof(SComponentModel))) ?? throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(SComponentModel).FullName));
+            if (s != null)
+            {
+                vsComponentModel = (IComponentModel) s;
+                var vsPackageInstallerEvents = vsComponentModel.GetService<IVsPackageInstallerEvents>();
+                var vsPackageInstallerProjectEvents = vsComponentModel.GetService<IVsPackageInstallerProjectEvents>();
+
+            }
+
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             _uiCtx = SynchronizationContext.Current;
-            Instance = new AuditdotNETVSIXPackage();
-
-            this.AddService(typeof(INuGetPackagesAuditService), CreateNuGetPackagesAuditServiceAsync);
-            
-            var x = await GetServiceAsync(typeof(IVsMonitorSelection));
-            if (x != null)
-            {
-                _vsMonitorSelection = (IVsMonitorSelection)x;
-            }
-            else
-            {
-                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
-            }
-
+            _vsMonitorSelection = await GetAsync<IVsMonitorSelection>();
+            /*
             x = await GetServiceAsync(typeof(IVsPackageInstallerEvents));
             if (x != null)
             {
@@ -114,7 +117,8 @@ namespace Audit.NET.VSIX
             {
                 throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
             }
-
+            */
+            /*
             x = await GetServiceAsync(typeof(IVsOutputWindowPane));
             if (x != null)
             {
@@ -124,9 +128,19 @@ namespace Audit.NET.VSIX
             {
                 throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
             }
-
+            */
             await auditPackagesCommand.InitializeAsync(this);
-            
+
+            bool isSolutionLoaded = await IsSolutionLoadedAsync();
+
+            if (isSolutionLoaded)
+            {
+                HandleOpenSolution();
+            }
+
+            // Listen for subsequent solution events
+            SolutionEvents.OnAfterOpenSolution += HandleOpenSolution;
+
         }
         #endregion
 
@@ -136,6 +150,20 @@ namespace Audit.NET.VSIX
             await service.InitializeAsync(cancellationToken);
             return service;
         }
+
+        private async TTasks.Task<TService> GetAsync<TService>()
+        {
+            var x = await GetServiceAsync(typeof(TService));
+            if (x != null)
+            {
+                return (TService) x;
+            }
+            else
+            {
+                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(TService).FullName));
+            }
+        }
+
         private async System.Threading.Tasks.Task<bool> IsSolutionLoadedAsync()
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -146,9 +174,15 @@ namespace Audit.NET.VSIX
             return value is bool isSolOpen && isSolOpen;
         }
 
+        private void HandleOpenSolution(object sender = null, EventArgs e = null)
+        {
+            // Handle the open solution and try to do as much work
+            // on a background thread as possible
+        }
         #region Fields
 
         private SynchronizationContext _uiCtx;
+        private IComponentModel vsComponentModel;
         //private uint _solutionNotBuildingAndNotDebuggingContextCookie;
         private IVsOutputWindowPane _vsOutput;
         private IVsMonitorSelection _vsMonitorSelection;
