@@ -1,11 +1,39 @@
-﻿using System;
+﻿#region License
+// Copyright (c) 2015-2019, Sonatype Inc.
+// All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//     * Neither the name of Sonatype, OSS Index, nor the
+//       names of its contributors may be used to endorse or promote products
+//       derived from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL SONATYPE BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#endregion
+
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Events;
 using Microsoft.VisualStudio.Shell.Interop;
-//using Task = System.Threading.Tasks.Task;
+using NuGet.VisualStudio;
+using TTasks = System.Threading.Tasks;
 
 namespace Audit.NET.VSIX
 {
@@ -29,10 +57,16 @@ namespace Audit.NET.VSIX
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideService((typeof(INuGetPackagesAuditService)), IsAsyncQueryable = true)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class AuditdotNETVSIXPackage : AsyncPackage
     {
-         /// <summary>
+        public AuditdotNETVSIXPackage()
+        {
+            
+        }
+        
+        /// <summary>
         /// Audit.NET.VSIXPackage GUID string.
         /// </summary>
         public const string PackageGuidString = "d6329e33-9e01-4db6-bb76-7af303523a8a";
@@ -44,7 +78,6 @@ namespace Audit.NET.VSIX
         }
 
         #region Package Members
-
         /// <summary>
         /// Initialization of the package; this method is called right after the package is sited, so this is the place
         /// where you can put all the initialization code that rely on services provided by VisualStudio.
@@ -52,19 +85,57 @@ namespace Audit.NET.VSIX
         /// <param name="cancellationToken">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
         /// <param name="progress">A provider for progress updates.</param>
         /// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
-        protected override async System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override async TTasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
-            Instance = new AuditdotNETVSIXPackage();
-            
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            _uiCtx = SynchronizationContext.Current;
+            Instance = new AuditdotNETVSIXPackage();
+
+            this.AddService(typeof(INuGetPackagesAuditService), CreateNuGetPackagesAuditServiceAsync);
             
             var x = await GetServiceAsync(typeof(IVsMonitorSelection));
+            if (x != null)
+            {
+                _vsMonitorSelection = (IVsMonitorSelection)x;
+            }
+            else
+            {
+                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
+            }
+
+            x = await GetServiceAsync(typeof(IVsPackageInstallerEvents));
+            if (x != null)
+            {
+                _vsPackageInstallerEvents = (IVsPackageInstallerEvents)x;
+            }
+            else
+            {
+                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
+            }
+
+            x = await GetServiceAsync(typeof(IVsOutputWindowPane));
+            if (x != null)
+            {
+                _vsOutput = (IVsOutputWindowPane)x;
+            }
+            else
+            {
+                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
+            }
+
             await auditPackagesCommand.InitializeAsync(this);
             
         }
+        #endregion
 
+        public async TTasks.Task<object> CreateNuGetPackagesAuditServiceAsync(IAsyncServiceContainer container, CancellationToken cancellationToken, Type serviceType)
+        {
+            NuGetPackagesAuditService service = new NuGetPackagesAuditService(this);
+            await service.InitializeAsync(cancellationToken);
+            return service;
+        }
         private async System.Threading.Tasks.Task<bool> IsSolutionLoadedAsync()
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -75,7 +146,15 @@ namespace Audit.NET.VSIX
             return value is bool isSolOpen && isSolOpen;
         }
 
+        #region Fields
 
+        private SynchronizationContext _uiCtx;
+        //private uint _solutionNotBuildingAndNotDebuggingContextCookie;
+        private IVsOutputWindowPane _vsOutput;
+        private IVsMonitorSelection _vsMonitorSelection;
+        private IVsPackageInstallerEvents _vsPackageInstallerEvents;
         #endregion
+
+        
     }
 }
