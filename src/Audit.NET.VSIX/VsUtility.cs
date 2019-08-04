@@ -41,8 +41,9 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 using NuGet.VisualStudio;
 
+using Audit.NET.VSIX;
 
-namespace Audit.NET.VSIX
+namespace NugetAuditor.VSIX
 {
     internal static class VsUtility
     {
@@ -67,7 +68,7 @@ namespace Audit.NET.VSIX
 
             IVsHierarchy hierarchy = null;
 
-            var solution = AuditdotNETVSIXPackage.Instance.GetService<IVsSolution, IVsSolution>();
+            var solution = VSPackage.Instance.GetService<IVsSolution, IVsSolution>();
 
             ErrorHandler.ThrowOnFailure(solution.GetProjectOfUniqueName(project.UniqueName, out hierarchy));
 
@@ -88,7 +89,7 @@ namespace Audit.NET.VSIX
             uint itemID;
             IVsWindowFrame windowFrame;
 
-            if (VsShellUtilities.IsDocumentOpen(AuditdotNETVSIXPackage.Instance, path, new Guid(LogicalViewID.TextView), out uiHierarchy, out itemID, out windowFrame))
+            if (VsShellUtilities.IsDocumentOpen(VSPackage.Instance, path, new Guid(LogicalViewID.TextView), out uiHierarchy, out itemID, out windowFrame))
             {
                 IVsTextView pView;
                 IVsTextLines textLines;
@@ -168,7 +169,7 @@ namespace Audit.NET.VSIX
             {
                 // FIXME: This should not happen
                 if (project == null) return false;
-                IVsPackageInstallerServices locator = AuditdotNETVSIXPackage.Instance.GetService<IVsPackageInstallerServices, IVsPackageInstallerServices>();
+                IVsPackageInstallerServices locator = VSPackage.Instance.GetService<IVsPackageInstallerServices, IVsPackageInstallerServices>();
                 // FIXME: This should not happen
                 if (locator == null) return false;
                 locator.IsPackageInstalled(project, "__dummy__");

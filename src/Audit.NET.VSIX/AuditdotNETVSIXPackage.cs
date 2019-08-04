@@ -1,5 +1,5 @@
 ﻿#region License
-// Copyright (c) 2015-2019, Sonatype Inc.
+// Copyright (c) 2015-2018, Sonatype Inc.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -26,22 +26,17 @@
 #endregion
 
 using System;
-using System.ComponentModel.Composition;
+using System.ComponentModel.Design;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Threading;
-
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Events;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.ComponentModelHost;
-using NuGet.VisualStudio;
-
-using TTasks = System.Threading.Tasks;
-
+using EnvDTE;
+using System.Threading;
 using Audit.NET.VSIX.Properties;
 
-namespace Audit.NET.VSIX
+namespace NugetAuditor.VSIX
 {
     /// <summary>
     /// This is the class that implements the package exposed by this assembly.
@@ -60,137 +55,228 @@ namespace Audit.NET.VSIX
     /// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
     /// </para>
     /// </remarks>
-    [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [Guid(PackageGuidString)]
+    [PackageRegistration(UseManagedResourcesOnly = true)]
+    [InstalledProductRegistration("#110", "#112", "1.1", IconResourceID = 400)] // Info on this package for Help/About
+    [Guid(GuidList.guidAuditPkgString)]
+    [ProvideAutoLoad(UIContextGuids.SolutionExists)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideService((typeof(INuGetPackagesAuditService)), IsAsyncQueryable = true)]
-    [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
-    public sealed class AuditdotNETVSIXPackage : AsyncPackage
+    [ProvideOptionPage(typeof(OptionPageGrid), "Audit.Net", "Options", 0, 0, true)]
+    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
+    public sealed class VSPackage : Package, IDisposable
     {
-        public AuditdotNETVSIXPackage()
+        private static VSPackage _instance;
+        private NugetAuditManager _auditManager;
+        private SynchronizationContext _uiCtx;
+        private uint _solutionNotBuildingAndNotDebuggingContextCookie;
+        private IVsMonitorSelection _vsMonitorSelection;
+
+        internal IVsMonitorSelection MonitorSelection
         {
-            
+            get
+            {
+                if (this._vsMonitorSelection == null)
+                {
+                    this._vsMonitorSelection = ServiceLocator.GetInstance<IVsMonitorSelection>();
+
+                    if (this._vsMonitorSelection == null)
+                    {
+                        throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
+                    }
+                }
+                return this._vsMonitorSelection;
+            }
         }
-        
+
+        internal NugetAuditManager AuditManager
+        {
+            get
+            {
+                if (this._auditManager == null)
+                {
+                    this._auditManager = new NugetAuditManager(this);
+                }
+                return this._auditManager;
+            }
+        }
+
+        public static void AssertOnMainThread()
+        {
+            if (!ThreadHelper.CheckAccess())
+            {
+                throw new COMException(string.Format("{0} must be called on the UI thread.", "AssertOnMainThread"), -2147417842);
+            }
+
+            //ThreadHelper.ThrowIfNotOnUIThread("AssertOnMainThread");
+        }
+
         /// <summary>
-        /// Audit.NET.VSIXPackage GUID string.
+        /// Initializes a new instance of the <see cref="VSPackage"/> class.
         /// </summary>
-        public const string PackageGuidString = "d6329e33-9e01-4db6-bb76-7af303523a8a";
-
-        public static AuditdotNETVSIXPackage Instance
+        public VSPackage()
         {
-            get;
-            private set;
+            // Inside this method you can place any initialization code that does not require
+            // any Visual Studio service because at this point the package object is created but
+            // not sited yet inside Visual Studio environment. The place to do all the other
+            // initialization is the Initialize method.
+
+            _instance = this;
+
+            ServiceLocator.InitializePackageServiceProvider(this);
         }
 
-        #region Package Members
+        public static VSPackage Instance
+        {
+            get { return _instance; }
+        }
+
+        internal SynchronizationContext UICtx
+        {
+            get
+            {
+                return _uiCtx;
+            }
+        }
+
+        public int Option_CacheSync
+        {
+            get
+            {
+                OptionPageGrid page = (OptionPageGrid)GetDialogPage(typeof(OptionPageGrid));
+                return page.CacheSync;
+            }
+        }
+
+
         /// <summary>
         /// Initialization of the package; this method is called right after the package is sited, so this is the place
         /// where you can put all the initialization code that rely on services provided by VisualStudio.
         /// </summary>
-        /// <param name="cancellationToken">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
-        /// <param name="progress">A provider for progress updates.</param>
-        /// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
-        protected override async TTasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override void Initialize()
         {
-            // When initialized asynchronously, the current thread may be a background thread at this point.
-            // Do any initialization that requires the UI thread after switching to the UI thread.
-            Instance = new AuditdotNETVSIXPackage();
-            this.AddService(typeof(INuGetPackagesAuditService), CreateNuGetPackagesAuditServiceAsync);
-            var s = (await this.GetServiceAsync(typeof(SComponentModel))) ?? throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(SComponentModel).FullName));
-            if (s != null)
-            {
-                vsComponentModel = (IComponentModel) s;
-                var vsPackageInstallerEvents = vsComponentModel.GetService<IVsPackageInstallerEvents>();
-                var vsPackageInstallerProjectEvents = vsComponentModel.GetService<IVsPackageInstallerProjectEvents>();
+            base.Initialize();
 
-            }
-
-            await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             _uiCtx = SynchronizationContext.Current;
-            _vsMonitorSelection = await GetAsync<IVsMonitorSelection>();
-            /*
-            x = await GetServiceAsync(typeof(IVsPackageInstallerEvents));
-            if (x != null)
-            {
-                _vsPackageInstallerEvents = (IVsPackageInstallerEvents)x;
-            }
-            else
-            {
-                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
-            }
-            */
-            /*
-            x = await GetServiceAsync(typeof(IVsOutputWindowPane));
-            if (x != null)
-            {
-                _vsOutput = (IVsOutputWindowPane)x;
-            }
-            else
-            {
-                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(IVsMonitorSelection).FullName));
-            }
-            */
-            await auditPackagesCommand.InitializeAsync(this);
 
-            bool isSolutionLoaded = await IsSolutionLoadedAsync();
+            // get the solution not building and not debugging cookie
+            Guid guid = VSConstants.UICONTEXT.SolutionExistsAndNotBuildingAndNotDebugging_guid;
+            MonitorSelection.GetCmdUIContextCookie(ref guid, out _solutionNotBuildingAndNotDebuggingContextCookie);
 
-            if (isSolutionLoaded)
-            {
-                HandleOpenSolution();
-            }
+            AuditManager.Initialize();
 
-            // Listen for subsequent solution events
-            SolutionEvents.OnAfterOpenSolution += HandleOpenSolution;
-
+            // Add our command handlers for menu (commands must exist in the .vsct file)
+            AddMenuCommandHandlers();
         }
-        #endregion
 
-        public async TTasks.Task<object> CreateNuGetPackagesAuditServiceAsync(IAsyncServiceContainer container, CancellationToken cancellationToken, Type serviceType)
+        private void AddMenuCommandHandlers()
         {
-            NuGetPackagesAuditService service = new NuGetPackagesAuditService(this);
-            await service.InitializeAsync(cancellationToken);
-            return service;
-        }
+            var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
 
-        private async TTasks.Task<TService> GetAsync<TService>()
-        {
-            var x = await GetServiceAsync(typeof(TService));
-            if (x != null)
+            if (mcs != null)
             {
-                return (TService) x;
+                // menu command for "Audit NuGet packages"
+                CommandID auditPackagesCommandID = new CommandID(GuidList.guidAuditCmdSet, PkgCmdIDList.cmdidAuditPackages);
+                var auditPackagesCommand = new OleMenuCommand(InvokeAuditPackagesHandler, null, BeforeQueryStatusForAuditPackages, auditPackagesCommandID);
+                // '$' - This indicates that the input line other than the argument forms a single argument string with no autocompletion
+                //       Autocompletion for filename(s) is supported for option 'p' or 'd' which is not applicable for this command
+                auditPackagesCommand.ParametersDescription = "$";
+                mcs.AddCommand(auditPackagesCommand);
+
+                // menu command for "Audit NuGet packages for solution"
+                CommandID auditPackagesForSolutionCommandID = new CommandID(GuidList.guidAuditCmdSet, PkgCmdIDList.cmdidAuditPackagesForSolution);
+                var auditPackagesForSolutionCommand = new OleMenuCommand(InvokeAuditPackagesForSolutionHandler, null, BeforeQueryStatusForAuditPackagesForSolution, auditPackagesForSolutionCommandID);
+                // '$' - This indicates that the input line other than the argument forms a single argument string with no autocompletion
+                //       Autocompletion for filename(s) is supported for option 'p' or 'd' which is not applicable for this command
+                auditPackagesForSolutionCommand.ParametersDescription = "$";
+                mcs.AddCommand(auditPackagesForSolutionCommand);
             }
-            else
+        }
+
+        private void BeforeQueryStatusForAuditPackages(object sender, EventArgs args)
+        {
+            OleMenuCommand command = (OleMenuCommand)sender;
+            command.Visible = IsSolutionExistsAndNotDebuggingAndNotBuilding() && HasActiveLoadedSupportedProject;
+            // disable the menu if any audits are already running
+            command.Enabled = !AuditManager.IsAuditRunning;
+        }
+
+        private void BeforeQueryStatusForAuditPackagesForSolution(object sender, EventArgs args)
+        {
+            OleMenuCommand command = (OleMenuCommand)sender;
+            command.Visible = IsSolutionExistsAndNotDebuggingAndNotBuilding();
+            // disable the menu if any audits are already running
+            command.Enabled = !AuditManager.IsAuditRunning;
+        }
+
+        private bool IsSolutionExistsAndNotDebuggingAndNotBuilding()
+        {
+            int pfActive;
+            int result = MonitorSelection.IsCmdUIContextActive(_solutionNotBuildingAndNotDebuggingContextCookie, out pfActive);
+            return (result == VSConstants.S_OK && pfActive > 0);
+        }
+
+        private bool HasActiveLoadedSupportedProject
+        {
+            get
             {
-                throw new InvalidOperationException(string.Format(Resources.Culture, Resources.General_MissingService, typeof(TService).FullName));
+                return (ActiveLoadedSupportedProject != null);
             }
         }
 
-        private async System.Threading.Tasks.Task<bool> IsSolutionLoadedAsync()
+        private Project ActiveLoadedSupportedProject
         {
-            await JoinableTaskFactory.SwitchToMainThreadAsync();
-            var solService = await (GetServiceAsync(typeof(SVsSolution)) ?? throw new Exception()) as IVsSolution;
-            
-            ErrorHandler.ThrowOnFailure(solService.GetProperty((int)__VSPROPID.VSPROPID_IsSolutionOpen, out object value));
+            get
+            {
+                var project = VsUtility.GetActiveProject(MonitorSelection);
 
-            return value is bool isSolOpen && isSolOpen;
+                if (project != null
+                    && !VsUtility.IsProjectUnloaded(project)
+                    && VsUtility.IsProjectSupported(project))
+                {
+                    return project;
+                }
+
+                return null;
+            }
         }
 
-        private void HandleOpenSolution(object sender = null, EventArgs e = null)
+        private void InvokeAuditPackagesHandler(object sender, EventArgs e)
         {
-            // Handle the open solution and try to do as much work
-            // on a background thread as possible
+            AuditManager.AuditProjectPackages(ActiveLoadedSupportedProject);
         }
-        #region Fields
 
-        private SynchronizationContext _uiCtx;
-        private IComponentModel vsComponentModel;
-        //private uint _solutionNotBuildingAndNotDebuggingContextCookie;
-        private IVsOutputWindowPane _vsOutput;
-        private IVsMonitorSelection _vsMonitorSelection;
-        private IVsPackageInstallerEvents _vsPackageInstallerEvents;
-        #endregion
+        private void InvokeAuditPackagesForSolutionHandler(object sender, EventArgs e)
+        {
+            AuditManager.AuditSolutionPackages();
+        }
 
-        
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                if (disposing)
+                {
+                    if (this._auditManager != null)
+                    {
+                        this._auditManager.Dispose();
+                        this._auditManager = null;
+                    }
+
+                    GC.SuppressFinalize(this);
+                }
+
+                _vsMonitorSelection = null;
+                _uiCtx = null;
+                _instance = null;
+            }
+            finally
+            {
+                base.Dispose(disposing);
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
     }
 }

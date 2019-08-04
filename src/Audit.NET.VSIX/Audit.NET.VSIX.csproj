@@ -48,15 +48,24 @@
     <Compile Include="Attributes\ResourcesCategoryAttribute.cs" />
     <Compile Include="Attributes\ResourcesDescriptionAttribute.cs" />
     <Compile Include="Attributes\ResourcesDisplayNameAttribute.cs" />
-    <Compile Include="auditPackagesCommand.cs" />
+    <Compile Include="AuditCompletedEventArgs.cs" />
+    <Compile Include="BackgroundQueue.cs" />
+    <Compile Include="ErrorHandler.cs" />
+    <Compile Include="NugetAuditManager.cs" />
     <Compile Include="NuGetPackagesAuditService\INuGetPackagesAuditService.cs" />
     <Compile Include="NuGetPackagesAuditService\NuGetPackagesAuditService.cs" />
+    <Compile Include="OptionPageGrid.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="PackageReferenceMarker.cs" />
+    <Compile Include="PkgCmdID.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Properties\VersionInfo.cs" />
+    <Compile Include="ServiceLocator.cs" />
     <Compile Include="VSEventSinks\SelectionEvents.cs" />
     <Compile Include="ExceptionHelper.cs" />
     <Compile Include="Guids.cs" />
@@ -64,6 +73,9 @@
     <Compile Include="AuditdotNETVSIXPackage.cs" />
     <Compile Include="VsConstants.cs" />
     <Compile Include="VsUtility.cs" />
+    <Compile Include="VsVersionHelper.cs" />
+    <Compile Include="VulnerabilityTask.cs" />
+    <Compile Include="VulnerabilityTaskProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">
@@ -82,6 +94,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.200" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.1.3133" />
+    <PackageReference Include="NuGet.Common">
+      <Version>5.2.0</Version>
+    </PackageReference>
     <PackageReference Include="NuGet.VisualStudio">
       <Version>5.2.0</Version>
     </PackageReference>
@@ -109,7 +124,12 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Audit.NET.Lib\Audit.NET.Lib.csproj">
+      <Project>{b7b53c9b-aab6-496c-92fa-5e315a71753b}</Project>
+      <Name>Audit.NET.Lib</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

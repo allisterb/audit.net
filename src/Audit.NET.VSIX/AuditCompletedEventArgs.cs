@@ -33,15 +33,44 @@ using System.Threading.Tasks;
 
 namespace NugetAuditor.VSIX
 {
-    static class GuidList
+    /// <summary>
+	/// This class wraps a <see cref="AuditResult"/> in the .NET standard
+	/// <see cref="EventArgs"/> fashion needed by event handlers. This event argument
+	/// is passed to <see cref="AuditRunner.Completed"/>
+	/// </summary>
+	public sealed class AuditCompletedEventArgs : EventArgs
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+        private IEnumerable<Lib.AuditResult> _results;
+        private Exception _exception;
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
-        public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
+        /// <summary>
+        /// Creates a new instance of <see cref="AuditCompletedEventArgs"/> by the given
+        /// <see cref="Lib.AuditResult"/> and <see cref="Exception"/>.
+        /// </summary>
+        /// <param name="result">Contains the result returned by audit.</param>
+        /// <param name="exception">If an error occured running audit
+        /// <paramref name="exception"/> refers to the <see cref="System.Exception"/>.</param>
+        public AuditCompletedEventArgs(IEnumerable<Lib.AuditResult> results, Exception exception)
+        {
+            _results = results;
+            _exception = exception;
+        }
 
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
-        public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
+        /// <summary>
+        /// Gets the <see cref="Lib.AuditResult"/>.
+        /// </summary>
+        public IEnumerable<Lib.AuditResult> Results
+        {
+            get { return _results; }
+        }
+
+        /// <summary>
+        /// Gets the exception (if any) that was raised while running the auditor. If
+        /// no error occurred the return value is <see langword="null"/>.
+        /// </summary>
+        public Exception Exception
+        {
+            get { return _exception; }
+        }
     }
-
 }

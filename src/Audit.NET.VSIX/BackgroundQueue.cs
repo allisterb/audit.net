@@ -29,19 +29,62 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NugetAuditor.VSIX
 {
-    static class GuidList
+    internal class BackgroundQueue   : IDisposable
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+       
+        private Task _previousTask = Task.FromResult(true);
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
-        public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
+        private object _lock = new object();
 
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
-        public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
+        public Task QueueTaskAsync(Action action)
+        {
+            return QueueTaskAsync(action, TaskScheduler.Default);
+        }
+
+        public Task QueueTaskAsync(Action action, TaskScheduler taskScheduler)
+        {
+            lock (_lock)
+            {
+                var task = _previousTask.ContinueWith(t => action()
+                    , CancellationToken.None
+                    , TaskContinuationOptions.None
+                    , taskScheduler);
+
+                _previousTask = task;
+
+                return task;
+            }
+        }
+
+        
+        public Task<T> QueueTaskAsync<T>(Func<T> work)
+        {
+            return QueueTaskAsync(work, TaskScheduler.Default);
+        }
+
+        public Task<T> QueueTaskAsync<T>(Func<T> work, TaskScheduler taskScheduler)
+        {
+            lock (_lock)
+            {
+                var task = _previousTask.ContinueWith(t => work()
+                    , CancellationToken.None
+                    , TaskContinuationOptions.None
+                    , taskScheduler);
+
+                _previousTask = task;
+
+                return task;
+            }
+        }
+
+        public void Dispose()
+        {
+            _previousTask.Dispose();
+        }
     }
-
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Audit.NET.VSIX
+namespace NugetAuditor.VSIX
 {
 	internal class VsConstants
 	{

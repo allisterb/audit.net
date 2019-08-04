@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.29102.190
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Audit.NET.VSIX", "Audit.NET.VSIX\Audit.NET.VSIX.csproj", "{30C50296-C62A-49FD-A9F5-AF3754CCDA4C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Audit.NET.Lib", "Audit.NET.Lib\Audit.NET.Lib.csproj", "{B7B53C9B-AAB6-496C-92FA-5E315A71753B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{30C50296-C62A-49FD-A9F5-AF3754CCDA4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30C50296-C62A-49FD-A9F5-AF3754CCDA4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30C50296-C62A-49FD-A9F5-AF3754CCDA4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7B53C9B-AAB6-496C-92FA-5E315A71753B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7B53C9B-AAB6-496C-92FA-5E315A71753B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7B53C9B-AAB6-496C-92FA-5E315A71753B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7B53C9B-AAB6-496C-92FA-5E315A71753B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

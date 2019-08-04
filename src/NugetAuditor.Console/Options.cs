@@ -1,5 +1,4 @@
-﻿#region License
-// Copyright (c) 2015-2018, Sonatype Inc.
+﻿// Copyright (c) 2015-2018, Sonatype Inc.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -23,25 +22,37 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+using CommandLine;
+using CommandLine.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NugetAuditor.VSIX
+namespace NugetAuditor.ConsoleApp
 {
-    static class GuidList
+    class Options
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+#if DEBUG
+        const bool verbose = true;
+#else
+        const bool verbose = false;
+#endif
+        [Option('p', "package", DefaultValue = "packages.config", HelpText = "Specific packages.config file to audit.")]
+        public string Package { get; set; }
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
-        public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
+        [Option('c', "cache", DefaultValue = 0, HelpText = "Number of minutes item is cached. [0: Default, -1: Disabled]")]
+        public int CacheSync { get; set; }
 
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
-        public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
+        [Option('v', "verbose", DefaultValue = verbose, HelpText = "Print details during execution.")]
+        public bool Verbose { get; set; }
+
+        [HelpOption]
+        public string GetUsage()
+        {
+            return HelpText.AutoBuild(this);
+        }
     }
-
 }

@@ -1,5 +1,4 @@
-﻿#region License
-// Copyright (c) 2015-2018, Sonatype Inc.
+﻿// Copyright (c) 2015-2018, Sonatype Inc.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -23,25 +22,48 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+using RestSharp;
+using RestSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Cache;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NugetAuditor.VSIX
+namespace NugetAuditor.Lib.OSSIndex
 {
-    static class GuidList
+    public abstract class ApiClientBase
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+        private static Version version = typeof(ApiClientBase).Assembly.GetName().Version;
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
-        public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
+        private string _baseUrl;
+        private HttpRequestCachePolicy _cachePolicy;
+        private RestClient _restClient;
 
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
-        public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
+        public ApiClientBase(string baseUrl, HttpRequestCachePolicy cachePolicy)
+        {
+            this._baseUrl = baseUrl;
+            this._cachePolicy = cachePolicy;
+
+            this._restClient = new RestClient(this._baseUrl)
+            {
+                CachePolicy = cachePolicy,
+                UserAgent = string.Format("Audit.Net {0}", version),
+                FollowRedirects = true,
+            };
+        }
+
+        internal IRestResponse<T> Execute<T>(RestRequest request) where T : IApiResponse, new()
+        {
+            return this._restClient.Execute<T>(request);
+        }
+
+        internal Task<IRestResponse<T>> ExecuteAsync<T>(RestRequest request) where T : IApiResponse, new()
+        {
+            return this._restClient.ExecuteTaskAsync<T>(request);
+        }
     }
-
 }

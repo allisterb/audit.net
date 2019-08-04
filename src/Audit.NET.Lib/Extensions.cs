@@ -1,5 +1,4 @@
-﻿#region License
-// Copyright (c) 2015-2018, Sonatype Inc.
+﻿// Copyright (c) 2015-2018, Sonatype Inc.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -23,25 +22,24 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 
-namespace NugetAuditor.VSIX
+namespace NugetAuditor.Lib
 {
-    static class GuidList
+    public static class Extensions
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+        public static string GetAttributeValue(this XElement element, XName name, string defaultValue)
+        {
+            var attribute = element.Attribute(name);
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
-        public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
-
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
-        public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
+            return (attribute == null) ? defaultValue : attribute.Value;
+        }   
     }
-
 }

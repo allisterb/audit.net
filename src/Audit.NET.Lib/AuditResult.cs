@@ -1,5 +1,4 @@
-﻿#region License
-// Copyright (c) 2015-2018, Sonatype Inc.
+﻿// Copyright (c) 2015-2018, Sonatype Inc.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -23,25 +22,78 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+using NugetAuditor.Lib.OSSIndex;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NugetAuditor.VSIX
+namespace NugetAuditor.Lib
 {
-    static class GuidList
+    public class AuditResult
     {
-        public const string guidAuditPkgString = "6f208d03-bc05-4a29-b715-0460c9023754";
+        private PackageId _packageId;
+        private Package _package;
+        
+        public PackageId PackageId
+        {
+            get
+            {
+                return this._packageId;
+            }
+        }
 
-        public const string guidAuditCmdSetString = "90c8506f-9b1d-40ae-862d-5bfe33e674c0";
-        public const string guidAuditTaskProviderString = "61750098-47b9-4629-8bc2-e3478de30381";
+		public int MatchedVulnerabilities
+		{
+			get
+			{
+                return this._package.Vulnerabilities.Count;
+			}
+		}
 
-        public static readonly Guid guidAuditCmdSet = new Guid(guidAuditCmdSetString);
-        public static readonly Guid guidAuditTaskProvider = new Guid(guidAuditTaskProviderString);
-    }
+		public IEnumerable<Vulnerability> Vulnerabilities
+        {
+            get
+            {
+				return this._package.Vulnerabilities ?? Enumerable.Empty<Vulnerability>();
+            }
+        }
 
+        public AuditStatus Status
+        {
+            get
+            {
+                if (this._package == null)
+                {
+                    return AuditStatus.UnknownPackage;
+                }
+                else if (this._package.Vulnerabilities.Count == 0)
+                {
+                    return AuditStatus.NoActiveVulnerabilities;
+                }
+                else
+                {
+                    return AuditStatus.HasVulnerabilities;
+                }
+            }
+        }
+
+        private AuditResult(PackageId packageId)
+        {
+            if (packageId == null)
+            {
+                throw new ArgumentNullException("packageId");
+            }
+
+            this._packageId = packageId;
+        }
+
+        public AuditResult(PackageId packageId, Package package)
+            : this(packageId)
+        {
+            this._package = package;
+        }
+    }    
 }
