@@ -39,6 +39,8 @@ using NuGet.VisualStudio;
 
 using TTasks = System.Threading.Tasks;
 
+using Audit.NET.VSIX.Properties;
+
 namespace Audit.NET.VSIX
 {
     /// <summary>

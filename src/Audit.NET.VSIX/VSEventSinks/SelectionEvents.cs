@@ -35,7 +35,7 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace Audit.NET.VSIX
+namespace Audit.NET.VSIX.VsEventSinks
 {
     public class VsSelectionEvents : IVsSelectionEvents, IDisposable
     {
